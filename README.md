@@ -6,7 +6,7 @@ github actions repository to share reusable actions and workflows
 ## Actions
 
 The composite github actions are organized with its versioning on its path
-(<action-name>-<action-version>).
+(\<action-name>-\<action-version>).
 
 ### docker-multiple-login
 
@@ -26,7 +26,7 @@ Login to multiple docker registries
 
 - Options:
 
-See the docker-multiple-login-<version>/action.yaml file. 
+See the docker-multiple-login-\<version>/action.yaml file.
 
 ### docker-build-push-sign
 
@@ -47,4 +47,4 @@ Build, push and sign the built docker images, requires `docker-multiple-login` a
 
 - Options:
 
-See the docker-build-push-sign-<version>/action.yaml file.
+See the docker-build-push-sign-\<version>/action.yaml file.
