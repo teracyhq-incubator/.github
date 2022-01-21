@@ -1,0 +1,110 @@
+name: 'docker-login-build-push-sign'
+description: 'Build, push and sign to multiple docker registries'
+inputs:
+  meta-tags:
+    description: "specify the meta tags for docker-meta"
+    required: false
+    default: |
+      type=semver,pattern={{version}}
+      type=ref,suffix=-{{sha}},event=branch
+      type=ref,event=branch
+  meta-images:
+    description: "specify the list of images (<registry>/<name>,) to be built, pushed, signed"
+    required: true
+  buildx-driver-opts:
+    description: "driver options for buildx"
+    default: ""
+  build-enabled:
+    description: "enable or disable the build"
+    required: false
+    default: "true"
+  build-context:
+    description: "the build context"
+    required: false
+    default: "."
+  build-file:
+    description: "the build file"
+    required: false
+    default: "Dockerfile"
+  build-args:
+    description: "the build arguments"
+    required: false
+  build-tags:
+    description: "the specified built tags"
+    required: false
+  build-platforms:
+    description: "the target platforms"
+    required: false
+    default: "linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/arm/v8"
+  build-load:
+    description: "export the docker image for local usage"
+    required: false
+    default: "false"
+  push-enabled:
+    description: "enable/disable the push"
+    required: false
+    default: "false"
+  cosign-release:
+    description: "the cosign release version to be used"
+    required: false
+    default: "v1.4.1"
+  cosign-key-base64:
+    description: "the base64 private cosign key"
+    required: false
+  cosign-password:
+    description: "the password to unlock the private cosign key"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Docker meta
+      id: docker-meta
+      uses: docker/metadata-action@v3
+      if: ${{ inputs.build-enabled == 'true' }}
+      with:
+        tags: ${{ inputs.meta-tags }}
+        images: ${{ inputs.meta-images }}
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+      if: ${{ inputs.build-enabled == 'true' }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+      if: ${{ inputs.build-enabled == 'true' }}
+      with:
+        driver-opts: ${{ inputs.buildx-driver-opts }}
+
+    - name: Build and push
+      id: build-and-push
+      uses: docker/build-push-action@v2
+      if: ${{ inputs.build-enabled == 'true' }}
+      with:
+        context: ${{ inputs.build-context }}
+        file: ${{ inputs.build-file }}
+        build-args: ${{ inputs.build-args }}
+        load: ${{ inputs.build-load }}
+        platforms: ${{ inputs.build-platforms }}
+        push: ${{ inputs.push-enabled == 'true' }}
+        tags: ${{ inputs.build-tags || steps.docker-meta.outputs.tags }}
+        labels: ${{ steps.docker-meta.outputs.labels }}
+
+    - name: Install cosign
+      if: ${{ inputs.build-enabled == 'true' && inputs.push-enabled == 'true' && inputs.cosign-key-base64 != '' }}
+      uses: sigstore/cosign-installer@main
+      with:
+        cosign-release: ${{ inputs.cosign-release }}
+
+    - name: Sign image with a key
+      if: ${{ inputs.build-enabled == 'true' && inputs.push-enabled == 'true' && inputs.cosign-key-base64 != ''  }}
+      run: |
+        echo $COSIGN_KEY_BASE64 | base64 --decode > /tmp/cosign.key && \
+        cosign sign --key /tmp/cosign.key ${TAGS}
+        # delete the key
+        rm -rf /tmp/cosign.key
+      shell: bash
+      env:
+        TAGS: ${{ steps.docker-meta.outputs.tags }}
+        COSIGN_KEY_BASE64: ${{ inputs.cosign-key-base64 }}
+        COSIGN_PASSWORD: ${{ inputs.cosign-password }}

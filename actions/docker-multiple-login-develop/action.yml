@@ -1,0 +1,197 @@
+name: 'docker-multiple-login'
+description: 'Login to multiple docker registries'
+inputs:
+  # login to GitHub Container Registry: https://github.com/docker/login-action#github-container-registry
+  github-token:
+    description: 'Github token'
+    required: false
+  # login to Docker Hub: https://github.com/docker/login-action#docker-hub
+  dockerhub-username:
+    description: "Docker Hub username"
+    required: false
+  dockerhub-token:
+    description: "Docker Hub token/password"
+    required: false
+  # login to GitLab: https://github.com/docker/login-action#gitlab
+  gitlab-username:
+    description: "GitLab username"
+    required: false
+  gitlab-token:
+    description: "GitLab token/password"
+    required: false
+  # login to Azure Container Registry (ACR): https://github.com/docker/login-action#azure-container-registry-acr
+  azure-registry-name:
+    description: "Azure Contaienr Registry name"
+    required: false
+  azure-client-id:
+    description: "Azure client id"
+    required: false
+  azure-client-secret:
+    description: "Azure client secret"
+    required: false
+  # login to Google Container Registry (GCR): https://github.com/docker/login-action#google-container-registry-gcr
+  gcr-json-key-base64:
+    description: "JSON key (base64) for Google Container Registry"
+    required: false
+  # login to Google Artifact Registry (GAR): https://github.com/docker/login-action#google-artifact-registry-gar
+  gar-location:
+    description: "Google Artifact Registry location"
+    required: false
+  gar-json-key-base64:
+    description: "JSON key (base64) for Google Artifact Registry"
+    required: false
+  # login to AWS Elastic Container Registry (ECR): https://github.com/docker/login-action#aws-elastic-container-registry-ecr
+  ecr-is-public-registry:
+    description: "set to true to use the ECR public registry: public.ecr.aws"
+    required: false
+    default: "false"
+  erc-aws-account-number:
+    description: "to build registry: <erc-aws-account-number>.dkr.ecr.<erc-region>.amazonaws.com"
+    required: false
+  erc-region:
+    description: "to build registry: <erc-aws-account-number>.dkr.ecr.<erc-region>.amazonaws.com"
+    required: false
+  erc-aws-access-key-id:
+    description: "aws access key id"
+    required: false
+  erc-aws-secret-access-key:
+    description: "aws secret access key"
+    required: false
+  erc-aws-account-ids:
+    description: "if you need to log in to Amazon ECR registries associated with other accounts"
+    required: false
+  # login to OCI Oracle Cloud Infrastructure Registry (OCIR): https://github.com/docker/login-action#oci-oracle-cloud-infrastructure-registry-ocir
+  ocir-region:
+    description: "to build registry: <ocir-region>.ocir.io"
+    required: false
+  ocir-username:
+    description: "OCIR username"
+    required: false
+  ocir-token:
+    description: "OCIR token/password"
+    required: false
+  # login to Quay.io: https://github.com/docker/login-action#quayio
+  quay-username:
+    description: "Quay username"
+    required: false
+  quay-token:
+    description: "Quay token/password"
+    required: false
+  # login to a customer registry: https://github.com/docker/login-action#customizing
+  customized-registry:
+    description: "the registry url"
+    required: false
+  customized-username:
+    description: "username"
+    required: false
+  customized-password:
+    description: "password/token"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+
+    # https://github.com/docker/login-action#github-container-registry
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
+      if: ${{ inputs.github-token }}
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.github-token }}
+
+    # https://github.com/docker/login-action#docker-hub
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      if: ${{ inputs.dockerhub-username && inputs.dockerhub-token }}
+      with:
+        registry: docker.io
+        username: ${{ inputs.dockerhub-username }}
+        password: ${{ inputs.dockerhub-token }}
+  
+    # https://github.com/docker/login-action#gitlab
+    - name: Login to GitLab
+      uses: docker/login-action@v1
+      if: ${{ inputs.gitlab-username && inputs.gitlab-token }}
+      with:
+        registry: registry.gitlab.com
+        username: ${{ inputs.gitlab-username }}
+        password: ${{ inputs.gitlab-token }}
+
+    # https://github.com/docker/login-action#azure-container-registry-acr
+    - name: Login to Azure Container Registry (ACR)
+      uses: docker/login-action@v1
+      if: ${{ inputs.azure-registry-name && inputs.azure-client-id && inputs.azure-client-secret }}
+      with:
+        registry: ${{ inputs.azure-registry-name }}.azurecr.io
+        username: ${{ inputs.azure-client-id  }}
+        password: ${{ inputs.azure-client-secret }}
+
+    # https://github.com/docker/login-action#google-container-registry-gcr
+    - name: Login to Google Container Registry (GCR)
+      uses: docker/login-action@v1
+      if: ${{ inputs.gcr-json-key-base64 }}
+      with:
+        registry: gcr.io
+        username: _json_key_base64
+        password: ${{ inputs.gcr-json-key-base64 }}
+
+    # https://github.com/docker/login-action#google-artifact-registry-gar
+    - name: Login to Google Artifact Registry (GAR)
+      uses: docker/login-action@v1
+      if: ${{ inputs.gar-location && inputs.gar-json-key-base64 }}
+      with:
+        registry: ${{ inputs.gar-location }}-docker.pkg.dev
+        username: _json_key_base64
+        password: ${{ inputs.gar-json-key-base64 }}
+
+    # https://github.com/docker/login-action#aws-elastic-container-registry-ecr
+    - name: Login to AWS Elastic Container Registry (ECR)
+      uses: docker/login-action@v1
+      if: ${{ inputs.ecr-is-public-registry != 'true' && inputs.erc-aws-account-number && inputs.erc-region &&  inputs.erc-aws-access-key-id && inputs.erc-aws-secret-access-key }}
+      with:
+        registry: ${{ inputs.erc-aws-account-number }}.dkr.ecr.${{ inputs.erc-region }}.amazonaws.com
+        username: ${{ inputs.erc-aws-access-key-id }}
+        password: ${{ inputs.erc-aws-secret-access-key }}
+      # If you need to log in to Amazon ECR registries associated with other accounts
+      env:
+        AWS_ACCOUNT_IDS: ${{ inputs.erc-aws-account-ids }}
+
+    # https://github.com/docker/login-action#aws-public-elastic-container-registry-ecr
+    - name: Login to AWS Public Elastic Container Registry (Public ECR)
+      uses: docker/login-action@v1
+      if: ${{ inputs.ecr-is-public-registry == 'true' && inputs.erc-region && inputs.erc-aws-access-key-id && inputs.erc-aws-secret-access-key }}
+      with:
+        registry: public.ecr.aws
+        username: ${{ inputs.erc-aws-access-key-id }}
+        password: ${{ inputs.erc-aws-secret-access-key }}
+      env:
+        AWS_REGION: ${{ inputs.erc-region }}
+
+    # https://github.com/docker/login-action#oci-oracle-cloud-infrastructure-registry-ocir
+    - name: Login to Oracle Cloud Infrastructure Registry (OCIR)
+      uses: docker/login-action@v1
+      if: ${{ inputs.ocir-region && inputs.ocir-username && inputs.ocir-token }}
+      with:
+        registry: ${{ inputs.ocir-region }}.ocir.io
+        username: ${{ inputs.ocir-username }}
+        password: ${{ inputs.ocir-token }}
+
+    # https://github.com/docker/login-action#quayio
+    - name: Login to Quay.io
+      uses: docker/login-action@v1
+      if: ${{ inputs.quay-username && inputs.quay-token }}
+      with:
+        registry: quay.io
+        username: ${{ inputs.quay-username }}
+        password: ${{ inputs.quay-token }}
+
+    # https://github.com/docker/login-action#customizing
+    - name: Login to ${{ inputs.customized-registry }}
+      uses: docker/login-action@v1
+      if: ${{ inputs.customized-registry && inputs.customized-username && inputs.customized-password }}
+      with:
+        registry: ${{ inputs.customized-registry }}
+        username: ${{ inputs.customized-username }}
+        password: ${{ inputs.customized-password }}
