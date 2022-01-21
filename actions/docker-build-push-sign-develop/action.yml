@@ -1,4 +1,4 @@
-name: 'docker-login-build-push-sign'
+name: 'docker-build-push-sign'
 description: 'Build, push and sign to multiple docker registries'
 inputs:
   meta-tags:
