@@ -8,7 +8,15 @@ inputs:
       type=semver,pattern={{version}}
       type=ref,suffix=-{{sha}},event=branch
       type=ref,event=branch
+  # to build meta-images [<registry>/<image-name>,]
+  meta-registries:
+    required: false
+    description: "specify the list of registries to push the image into"
+  meta-image-name:
+    required: true
+    description: "specify the docker image name to be pushed into the specified registries"
   meta-images:
+    deprecationMessage: "use meta-registries and meta-image-name instead"
     description: "specify the list of images (<registry>/<name>,) to be built, pushed, signed"
     required: true
   buildx-driver-opts:
@@ -35,7 +43,7 @@ inputs:
   build-platforms:
     description: "the target platforms"
     required: false
-    default: "linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/arm/v8"
+    default: "linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7"
   build-load:
     description: "export the docker image for local usage"
     required: false
@@ -54,17 +62,69 @@ inputs:
   cosign-password:
     description: "the password to unlock the private cosign key"
     required: false
+outputs:
+  meta-version:
+    description: "docker-meta version output"
+    value: ${{ steps.docker-meta.outputs.version }}
 
 runs:
   using: "composite"
   steps:
+    - name: Normalized env vars
+      id: nev
+      run: |
+        DEFAULT_REGISTRIES="ghcr.io/${GITHUB_REPOSITORY}"
+        # build docker meta images from registries (list of registries, separated by comma) and image name
+        # if registries is empty -> use github package registry
+        # the meta images are the list of <registry>/<image_name>
+        # build_meta_images <image_name>
+        # build_meta_images <registries> <image_name>
+        build_meta_images() {
+          local registries=$1 # can be empty
+          local image_name=$2 # required, most not empty
+          if [ -z "$image_name" ]; then
+            if [ -z "$registries" ]; then
+              echo "args required: build_meta_images <image_name> or build_meta_images <registries> <image_name>"
+              return
+            else
+              registries=$DEFAULT_REGISTRIES
+              image_name=$1
+            fi
+          fi
+
+          local meta_images=();
+
+          IFS=', ' read -r -a array <<< "$registries"
+          for reg in "${array[@]}"
+          do
+            meta_images+=("$reg/$image_name")
+          done
+          printf -v joined '%s,' "${meta_images[@]}"
+          echo "${joined%,}"
+        }
+
+        if [ -z "$IMAGE_NAME" ]; then
+          echo "inputs.meta-image-name is required";
+          exit 1;
+        fi
+
+        if [ -z "$REGISTRIES" ]; then
+          META_IMAGES=$(build_meta_images ${IMAGE_NAME})
+        else
+          META_IMAGES=$(build_meta_images $REGISTRIES ${IMAGE_NAME})
+        fi
+        echo "::set-output name=meta_images::${META_IMAGES}"
+      shell: bash
+      env:
+        REGISTRIES: "${{ inputs.meta-registries }}"
+        IMAGE_NAME: "${{ inputs.meta-image-name }}"
+
     - name: Docker meta
       id: docker-meta
       uses: docker/metadata-action@v3
-      if: ${{ inputs.build-enabled == 'true' }}
       with:
         tags: ${{ inputs.meta-tags }}
-        images: ${{ inputs.meta-images }}
+        images: ${{ inputs.meta-images || steps.nev.outputs.meta_images }}
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -82,7 +142,7 @@ runs:
       if: ${{ inputs.build-enabled == 'true' }}
       with:
         context: ${{ inputs.build-context }}
-        file: ${{ inputs.build-file }}
+        file: ${{ inputs.build-context }}/${{ inputs.build-file }}
         build-args: ${{ inputs.build-args }}
         load: ${{ inputs.build-load }}
         platforms: ${{ inputs.build-platforms }}
