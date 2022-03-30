@@ -30,6 +30,7 @@ jobs:
           dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker base image
+        id: base-image
         uses: ./actions/docker-build-push-sign-develop
         with:
           meta-registries: localhost:5000/local,localhost:5000/local2
@@ -47,7 +48,7 @@ jobs:
             network=host
           build-enabled: ${{ env.DOCKER_BUILD_ENABLED }}
           build-args: |
-            BASE_IMAGE=localhost:5000/local/base:${{ github.ref_name }}
+            BASE_IMAGE=localhost:5000/local/base:${{ steps.base-image.outputs.meta-version }}
           push-enabled: ${{ github.event_name != 'pull_request' && env.DOCKER_PUSH_ENABLED == 'true' }}
           cosign-key-base64: ${{ secrets.COSIGN_KEY_BASE64 }}
           cosign-password: ${{ secrets.COSIGN_PASSWORD }}
