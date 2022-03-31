@@ -13,7 +13,7 @@ inputs:
     required: false
     description: "specify the list of registries to push the image into"
   meta-image-name:
-    required: true
+    required: false # meta-image-name input will be true after removing the deprecated meta-images input
     description: "specify the docker image name to be pushed into the specified registries"
   meta-images:
     deprecationMessage: "use meta-registries and meta-image-name instead"
