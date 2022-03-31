@@ -103,21 +103,25 @@ runs:
           echo "${joined%,}"
         }
 
-        if [ -z "$IMAGE_NAME" ]; then
-          echo "inputs.meta-image-name is required";
-          exit 1;
+        if [ -z "$DEPRECATED_META_IMAGES" ]; then
+          if [ -z "$IMAGE_NAME" ]; then
+            echo "inputs.meta-image-name is required";
+            exit 1;
+          fi
+
+          if [ -z "$REGISTRIES" ]; then
+            META_IMAGES=$(build_meta_images ${IMAGE_NAME})
+          else
+            META_IMAGES=$(build_meta_images $REGISTRIES ${IMAGE_NAME})
+          fi
+          echo "::set-output name=meta_images::${META_IMAGES}"
         fi
 
-        if [ -z "$REGISTRIES" ]; then
-          META_IMAGES=$(build_meta_images ${IMAGE_NAME})
-        else
-          META_IMAGES=$(build_meta_images $REGISTRIES ${IMAGE_NAME})
-        fi
-        echo "::set-output name=meta_images::${META_IMAGES}"
       shell: bash
       env:
         REGISTRIES: "${{ inputs.meta-registries }}"
         IMAGE_NAME: "${{ inputs.meta-image-name }}"
+        DEPRECATED_META_IMAGES: ${{ inputs.meta-images }}
 
     - name: Docker meta
       id: docker-meta
