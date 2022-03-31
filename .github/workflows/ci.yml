@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+env:
+  DOCKER_BUILD_ENABLED: ${{ secrets.DOCKER_BUILD_ENABLED }}
+  DOCKER_PUSH_ENABLED: ${{ secrets.DOCKER_PUSH_ENABLED }}
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Login to Docker registries
+        if: github.event_name != 'pull_request' && env.DOCKER_BUILD_ENABLED == 'true' && env.DOCKER_PUSH_ENABLED == 'true'
+        uses: ./actions/docker-multiple-login-develop
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker base image
+        id: base-image
+        if: env.DOCKER_BUILD_ENABLED == 'true'
+        uses: ./actions/docker-build-push-sign-develop
+        with:
+          meta-registries: localhost:5000/local,localhost:5000/local2
+          meta-image-name: base
+          buildx-driver-opts: |
+            network=host
+          build-file: ./Dockerfile_base
+          push-enabled: true
+
+      - name: Build, push and sign Docker image
+        if: env.DOCKER_BUILD_ENABLED == 'true'
+        uses: ./actions/docker-build-push-sign-develop
+        with:
+          meta-image-name: test
+          buildx-driver-opts: |
+            network=host
+          build-enabled: ${{ env.DOCKER_BUILD_ENABLED }}
+          build-args: |
+            BASE_IMAGE=localhost:5000/local/base:${{ steps.base-image.outputs.meta-version }}
+          push-enabled: ${{ github.event_name != 'pull_request' && env.DOCKER_PUSH_ENABLED == 'true' }}
+          cosign-key-base64: ${{ secrets.COSIGN_KEY_BASE64 }}
+          cosign-password: ${{ secrets.COSIGN_PASSWORD }}
