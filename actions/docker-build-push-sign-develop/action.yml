@@ -115,7 +115,7 @@ runs:
           else
             META_IMAGES=$(build_meta_images $REGISTRIES ${IMAGE_NAME})
           fi
-          echo "::set-output name=meta_images::${META_IMAGES}"
+          echo "meta_images=${META_IMAGES}" >> $GITHUB_OUTPUT
         fi
 
       shell: bash
@@ -126,24 +126,24 @@ runs:
 
     - name: Docker meta
       id: docker-meta
-      uses: docker/metadata-action@v3
+      uses: docker/metadata-action@v4
       with:
         tags: ${{ inputs.meta-tags }}
         images: ${{ inputs.meta-images || steps.nev.outputs.meta_images }}
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
+      uses: docker/setup-qemu-action@v2
       if: ${{ inputs.build-enabled == 'true' }}
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+      uses: docker/setup-buildx-action@v2
       if: ${{ inputs.build-enabled == 'true' }}
       with:
         driver-opts: ${{ inputs.buildx-driver-opts }}
 
     - name: Build and push
       id: build-and-push
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v3
       if: ${{ inputs.build-enabled == 'true' }}
       with:
         context: ${{ inputs.build-context }}
