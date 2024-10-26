@@ -126,24 +126,24 @@ runs:
 
     - name: Docker meta
       id: docker-meta
-      uses: docker/metadata-action@v4
+      uses: docker/metadata-action@v5
       with:
         tags: ${{ inputs.meta-tags }}
         images: ${{ inputs.meta-images || steps.nev.outputs.meta_images }}
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
       if: ${{ inputs.build-enabled == 'true' }}
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
       if: ${{ inputs.build-enabled == 'true' }}
       with:
         driver-opts: ${{ inputs.buildx-driver-opts }}
 
     - name: Build and push
       id: build-and-push
-      uses: docker/build-push-action@v3
+      uses: docker/build-push-action@v6
       if: ${{ inputs.build-enabled == 'true' }}
       with:
         context: ${{ inputs.build-context }}
@@ -157,7 +157,7 @@ runs:
 
     - name: Install cosign
       if: ${{ inputs.build-enabled == 'true' && inputs.push-enabled == 'true' && inputs.cosign-key-base64 != '' }}
-      uses: sigstore/cosign-installer@main
+      uses: sigstore/cosign-installer@v3
       with:
         cosign-release: ${{ inputs.cosign-release }}
 
