@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     services:
       registry:
         image: registry:2
@@ -19,7 +19,7 @@ jobs:
           - 5000:5000
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Login to Docker registries
         if: github.event_name != 'pull_request' && env.DOCKER_BUILD_ENABLED == 'true' && env.DOCKER_PUSH_ENABLED == 'true'
